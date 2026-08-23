@@ -1,34 +1,58 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Navbar from './components/navbar/Navbar';
-import Home from './components/home/Home';
-import Resources from './components/resources/Resources';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AppRoutes from './routes/AppRoutes';
+import Footer from './components/footer/footer';
 import './App.css';
 
+// Auth guard — redirects unauthenticated users to /login
+function PrivateRoute({ children }) {
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem('flexitUser') || 'null');
+  } catch {
+    user = null;
+  }
+  if (!user?.userId) return <Navigate to="/login" replace />;
+  return children;
+}
+
+// Hide Navbar on auth pages
 function AppLayout() {
   const location = useLocation();
-  const hideNavbar = location.pathname === '/login' || location.pathname === '/signup';
+  const authPaths = ['/login', '/signup'];
+  const hideNavbar = authPaths.includes(location.pathname) || location.pathname.startsWith('/admin');
+
+  const hideLayout = location.pathname === '/login' || location.pathname === '/signup';
+  const showFooter = location.pathname === '/';
 
   return (
     <>
-      {!hideNavbar && <Navbar />}
+      {!hideLayout && <Navbar />}
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/resources" element={<Resources />} />
+        {/* Public auth routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+
+        {/* All admin + user routes (protected) */}
+        <Route
+          path="/*"
+          element={
+            <PrivateRoute>
+              <AppRoutes />
+            </PrivateRoute>
+          }
+        />
       </Routes>
+      {showFooter && <Footer />}
     </>
   );
 }
 
 function App() {
-  return (
-    <Router>
-      <AppLayout />
-    </Router>
-  );
+  return <AppRoutes />;
 }
 
 export default App;
+
